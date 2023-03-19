@@ -2,6 +2,7 @@ const express = require("express");
 const ExpressError = require("../expressError")
 const router = express.Router();
 const db = require("../db");
+var slugify = require('slugify');
 
 router.get('/', async function(req, res, next) {
     try {
@@ -29,24 +30,34 @@ router.post('/', async function(req, res, next) {
     try {
         const {code, name, description} = req.body;
         const results = await db.query(`INSERT INTO ccompanies (code, name, description) VALUES ($1, $2) RETURNING code, name, description`, [code, name, description]);
-        return res.status(201).json({companies: results.rows[0]})
+        return res.status(201).json.slugify({companies: results.rows[0]})
     } catch (e){
         return next(e)
     }
 })
 
 
-router.patch('/:code', async function(req,res,next) {
+router.put('/:code', async function(req,res,next) {
     try {
-        const { code } = req.params;
-        const { name, description } = req.body;
-        const results = await db.query(`UPDATE companies SET name=$1, description=$2 WHERE code=$3 RETURNING code, name, description`, [name, description, code])
-        if (results.rows.length === 0) {
-            throw new ExpressError (`Can't update company with code ${code}`, 404)
+        const paidToday = await db.query(
+            `UPDATE invoices SET paid_date=$1`, [req.params.paid_date]);
+
+        const unPay = await db.query(
+            `UPDATE invoices SET paid_date=null`, [req.params.paid_date]);
+
+        const date = new Date();
+
+        if(date === paidToday) {
+            return res.json({amt, paid})
+        } if(unPay === True) {
+            return res.json({amt, paid})
+        } else {
+            return
         }
-        return res.send({companies: results.rows[0]})
-    } catch (e) {
-        return next(e)
+
+
+    } catch (err) {
+        return next(err);
     }
 });
 
